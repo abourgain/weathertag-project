@@ -4,6 +4,7 @@ import json
 import math
 import os
 from typing import List, Optional
+import logging
 
 import requests
 from langchain.output_parsers import PydanticOutputParser
@@ -14,7 +15,6 @@ from pydantic import BaseModel, Field, field_validator
 
 from dotenv import load_dotenv
 
-from components.config import logging
 
 load_dotenv()
 
@@ -166,10 +166,10 @@ class LocationExtractionManager:
                     "lon": float(data[0]["lon"]),
                     "lat": float(data[0]["lat"]),
                 }
-            logging.debug(f"Error: Could not retrieve data for {location.city}, {location.country}")
+            logging.debug("Error: Could not retrieve data for %s, %s", location.city, location.country)
             return None
         except Exception as e:  # pylint: disable=broad-except
-            logging.debug(f"Error: {e}")
+            logging.debug("Error: %s", e)
             return None
 
     def haversine(self, coord1, coord2):

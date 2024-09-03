@@ -1,6 +1,7 @@
 """Main WeatherTag app."""
 
 #!/usr/bin/env -S conda run -n weathertag_env --live-stream streamlit run
+import argparse
 import datetime
 import os
 
@@ -8,6 +9,7 @@ import streamlit as st  # See: https://docs.streamlit.io/library/api-reference
 from dotenv import load_dotenv
 
 from components import wikipedia_current_events_page
+from components.content import INTRO_TEXT, SEPARATOR
 from components.events_extractor import (
     computer_event_duplication_rate,
     extract_current_events,
@@ -18,65 +20,58 @@ from components.location_embeddings import LocationEmbeddingManager
 from components.weather import get_country_name, load_weather_data, lookup_weather
 
 
-load_dotenv()
-
-
 @st.cache_data
 def load_weather_data_cached():
     """Load weather data and locations data, cached to avoid repeated loading."""
     return load_weather_data()
 
 
-def init_managers():
+def init_managers(dev: bool):
     """Initialize manager classes and store them in session state."""
-    if "location_extraction_manager" not in st.session_state:
-        st.session_state.location_extraction_manager = LocationExtractionManager() if "OPENAI_API_KEY" in os.environ else None
+    if "openai_api_key" not in st.session_state:
+        if dev:
+            st.session_state.openai_api_key = os.getenv("OPENAI_API_KEY")
+        else:
+            st.session_state.openai_api_key = None
+
+    if not st.session_state.openai_api_key:
+        st.session_state.openai_api_key = st.text_input("To access all AI functionalities: enter your OpenAI API key:", type="password")
+
+    if st.session_state.openai_api_key:
+        if "location_extraction_manager" not in st.session_state:
+            st.session_state.location_extraction_manager = LocationExtractionManager()
+        if "title_extraction_manager" not in st.session_state:
+            st.session_state.title_extraction_manager = TitleExtractorManager()
+
     if "location_embedding_manager" not in st.session_state:
         st.session_state.location_embedding_manager = LocationEmbeddingManager()
-    if "title_extraction_manager" not in st.session_state:
-        st.session_state.title_extraction_manager = TitleExtractorManager() if "OPENAI_API_KEY" in os.environ else None
 
 
-def weathertag_app():  # pylint: disable=too-many-locals
+def weathertag_app(dev: bool = False):  # pylint: disable=too-many-locals
     """Main WeatherTag app."""
+    if dev:
+        load_dotenv()
+
     st.set_page_config(layout="wide")
 
     # Load cached data
     weather_data_cache, locations_data_cache, coord_data_cache = load_weather_data_cached()
 
     # Initialize managers and store them in session state
-    init_managers()
+    init_managers(dev=dev)
 
-    """
-    # WeatherTag app
+    st.write(INTRO_TEXT)
 
-    [Wikipedia Current events](https://en.wikipedia.org/wiki/Portal:Current_events) pages enumerate noteworthy worldwide events for every single day [since 2002](https://en.wikipedia.org/wiki/Portal:Current_events/January_2002).
-    An event entry in those pages typically describes what happened where and when.
-    Suppose, we need to see the weather information alongside every event for some very important reason.
-    Given a geolocation and date/time, it's fairly easy to get the historic weather data from [OpenWeather](https://openweathermap.org) through their API as well as [bulk data access](https://openweathermap.org/bulk).
-
-    In this exercise, let's build an app that can tag events with their weather info.
-    In concrete terms, when clicking on the `show_current_events_tagged_with_weather()` option below,
-    we would like to see a clean list of events, and next to each event what the weather was like.
-    You can evolve this skeleton code which already knows how to fetch and render the Wikipedia Current events page for any given date.
-    This skeleton streamlit app should be self-explanatory but if you'd like to learn more, see the [Streamlit API docs](https://docs.streamlit.io/library/api-reference).
-
-    ----
-    """
-
-    if "OPENAI_API_KEY" in os.environ:
-        # Select the method
-        ai = st.toggle("Activate extraction with AI")
+    if st.session_state.openai_api_key:
+        # Now that the key is provided, show the AI toggle
+        ai = st.toggle("Use AI features")
     else:
+        # Prompt the user to enter the key if it hasn't been provided
+        st.warning("Please enter your OpenAI API key above to use AI features.")
         ai = False
 
     location_manager = st.session_state.location_extraction_manager if ai else st.session_state.location_embedding_manager
     title_manager = st.session_state.title_extraction_manager if ai else None
-
-    if ai:
-        st.write("AI extraction is activated. Using advanced language models for location and title extraction.")
-    else:
-        st.write("AI extraction is deactivated. Using traditional embedding-based location extraction.")
 
     fns = [
         show_actual_page,
@@ -118,11 +113,9 @@ def weathertag_app():  # pylint: disable=too-many-locals
     # grab the chosen date's current events page (just the actual content; wikitext parsed in html)
     html, wp_url = wikipedia_current_events_page(dt)
 
-    """
-    ----
-    """
+    st.write(SEPARATOR)
 
-    fn(**vars())  # NOTE this passes down to the selected function all variables in scope (vars())
+    fn(**vars())
 
 
 def show_actual_page(html, wp_url, **kwargs):
@@ -157,9 +150,7 @@ def show_current_events_extracted(**kwargs):
     duplication_rate = computer_event_duplication_rate(n_events_old, len(events))
     st.write("Previous method:")
     st.write(f"Event duplication rate: {duplication_rate:.2%} ({n_events_old} events extracted with the previous method, compared to {len(events)} now)")
-    """
-    ----
-    """
+    st.write(SEPARATOR)
     st.write("Current method:")
     st.write(events)
 
@@ -179,9 +170,6 @@ def show_weather_for_a_place(dt, weather_data_cache, locations_data_cache, **kwa
     """
     Lookup weather data for a place.
     """
-    # with st.spinner("Loading weather data..."):
-    #     _, locations_data_cache = load_weather_data()
-
     # Create a dictionary that maps country names to country codes
     country_name_to_code = {get_country_name(code): code for code in locations_data_cache.keys()}
 
@@ -222,5 +210,14 @@ def show_current_events_tagged_with_weather(**kwargs):
             st.write(weathers)
 
 
+def main():
+    """Main function."""
+    parser = argparse.ArgumentParser(description="WeatherTag app")
+    parser.add_argument("--dev", action="store_true", help="Run the app in development mode")
+    args = parser.parse_args()
+
+    weathertag_app(dev=args.dev)
+
+
 if __name__ == "__main__":
-    weathertag_app()
+    main()

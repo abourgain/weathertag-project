@@ -1,7 +1,9 @@
 """Python module for generating location embeddings and finding the closest locations to a given event text."""
 
 import json
+import logging
 from pathlib import Path
+
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import torch
@@ -9,7 +11,6 @@ from sentence_transformers import SentenceTransformer
 
 from components.llm import Location
 from components.weather import get_country_name
-from components.config import logging
 
 
 class LocationEmbeddingManager:

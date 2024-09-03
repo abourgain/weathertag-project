@@ -21,12 +21,12 @@ from components.weather import get_country_name, load_weather_data, lookup_weath
 
 
 @st.cache_data
-def load_weather_data_cached():
+def load_weather_data_cached(save_local: bool = False):
     """Load weather data and locations data, cached to avoid repeated loading."""
-    return load_weather_data()
+    return load_weather_data(save_local=save_local)
 
 
-def init_managers(dev: bool):
+def init_managers(dev: bool, save_local: bool = False):
     """Initialize manager classes and store them in session state."""
     if "openai_api_key" not in st.session_state:
         if dev:
@@ -39,15 +39,15 @@ def init_managers(dev: bool):
 
     if st.session_state.openai_api_key:
         if "location_extraction_manager" not in st.session_state:
-            st.session_state.location_extraction_manager = LocationExtractionManager()
+            st.session_state.location_extraction_manager = LocationExtractionManager(save_local=save_local)
         if "title_extraction_manager" not in st.session_state:
             st.session_state.title_extraction_manager = TitleExtractorManager()
 
     if "location_embedding_manager" not in st.session_state:
-        st.session_state.location_embedding_manager = LocationEmbeddingManager()
+        st.session_state.location_embedding_manager = LocationEmbeddingManager(save_local=save_local)
 
 
-def weathertag_app(dev: bool = False):  # pylint: disable=too-many-locals
+def weathertag_app(dev: bool = False, save_local: bool = False):  # pylint: disable=too-many-locals
     """Main WeatherTag app."""
     if dev:
         load_dotenv()
@@ -55,10 +55,10 @@ def weathertag_app(dev: bool = False):  # pylint: disable=too-many-locals
     st.set_page_config(layout="wide")
 
     # Load cached data
-    weather_data_cache, locations_data_cache, coord_data_cache = load_weather_data_cached()
+    weather_data_cache, locations_data_cache, coord_data_cache = load_weather_data_cached(save_local=save_local)
 
     # Initialize managers and store them in session state
-    init_managers(dev=dev)
+    init_managers(dev=dev, save_local=save_local)
 
     st.write(INTRO_TEXT)
 
@@ -214,9 +214,10 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(description="WeatherTag app")
     parser.add_argument("--dev", action="store_true", help="Run the app in development mode")
+    parser.add_argument("--save-local", action="store_true", help="Save the files locally")
     args = parser.parse_args()
 
-    weathertag_app(dev=args.dev)
+    weathertag_app(dev=args.dev, save_local=args.save_local)
 
 
 if __name__ == "__main__":

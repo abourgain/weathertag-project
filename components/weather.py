@@ -19,33 +19,30 @@ def get_country_name(country_code):
 
 
 @st.cache_data
-def load_weather_data():
+def load_weather_data(save_local: bool = False):
     """Load and index weather data from the gzip file, and cache the result."""
-    # Initialize empty dictionaries
     weather_data_cache, locations_data_cache, coord_data_cache = None, None, None
 
-    # Load data cache if they exists
-    if Path("./data/locations.json").exists():
+    # Load cached data from files if save_local is True and files exist
+    if save_local and Path("./data/locations.json").exists():
         with open("./data/locations.json", "r", encoding="utf-8") as f:
             locations_data_cache = json.load(f)
 
-    if Path("./data/coords.json").exists():
+    if save_local and Path("./data/coords.json").exists():
         with open("./data/coords.json", "r", encoding="utf-8") as f:
             coord_data_cache_str_keys = json.load(f)
-
-        # Convert the keys from strings to tuples
         coord_data_cache = {tuple(map(float, key.strip("()").split(", "))): value for key, value in coord_data_cache_str_keys.items()}
 
-    if Path("./data/weather.json").exists():
+    if save_local and Path("./data/weather.json").exists():
         with open("./data/weather.json", "r", encoding="utf-8") as f:
             weather_data_cache_str_keys = json.load(f)
-
-        # Convert the keys from strings to tuples
         weather_data_cache = {tuple(map(str, key.strip("()").replace("'", "").split(", "))): value for key, value in weather_data_cache_str_keys.items()}
 
+    # Return cached data if loaded from files
     if weather_data_cache and locations_data_cache and coord_data_cache:
         return weather_data_cache, locations_data_cache, coord_data_cache
 
+    # If not loaded from files, compute the data
     weather_data_cache, locations_data_cache, coord_data_cache = {}, {}, {}
 
     with gzip.open(Path("./data/daily_14.json.gz"), "rt", encoding="utf-8") as f:
@@ -61,7 +58,6 @@ def load_weather_data():
                 "data": data_dict,
             }
 
-            # Fill the locations data cache
             if country_code not in locations_data_cache:
                 locations_data_cache[country_code] = set()
             locations_data_cache[country_code].add(city)
@@ -70,26 +66,24 @@ def load_weather_data():
             if coord not in coord_data_cache:
                 coord_data_cache[coord] = (city, country_code)
 
-    # Sort the cities in each country for a better user experience
     for country_code in locations_data_cache:
         locations_data_cache[country_code] = sorted(locations_data_cache[country_code])
 
-    # If not exist, dump the locations data cache to a json file in the ./data/ folder
-    if not Path("./data/locations.json").exists():
-        with open("./data/locations.json", "w", encoding="utf-8") as f:
-            json.dump(locations_data_cache, f)
+    # Optionally save computed data to files if save_local is True
+    if save_local:
+        if not Path("./data/locations.json").exists():
+            with open("./data/locations.json", "w", encoding="utf-8") as f:
+                json.dump(locations_data_cache, f)
 
-    if not Path("./data/coords.json").exists():
-        with open("./data/coords.json", "w", encoding="utf-8") as f:
-            # Convert the keys from tuples to strings
-            coord_data_cache_str_keys = {str(key): value for key, value in coord_data_cache.items()}
-            json.dump(coord_data_cache_str_keys, f)
+        if not Path("./data/coords.json").exists():
+            with open("./data/coords.json", "w", encoding="utf-8") as f:
+                coord_data_cache_str_keys = {str(key): value for key, value in coord_data_cache.items()}
+                json.dump(coord_data_cache_str_keys, f)
 
-    if not Path("./data/weather.json").exists():
-        with open("./data/weather.json", "w", encoding="utf-8") as f:
-            # Convert the keys from tuples to strings
-            weather_data_cache_str_keys = {str(key): value for key, value in weather_data_cache.items()}
-            json.dump(weather_data_cache_str_keys, f)
+        if not Path("./data/weather.json").exists():
+            with open("./data/weather.json", "w", encoding="utf-8") as f:
+                weather_data_cache_str_keys = {str(key): value for key, value in weather_data_cache.items()}
+                json.dump(weather_data_cache_str_keys, f)
 
     return weather_data_cache, locations_data_cache, coord_data_cache
 

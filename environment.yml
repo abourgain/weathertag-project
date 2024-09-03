@@ -1,0 +1,22 @@
+#!/usr/bin/env -S conda env update -f
+# conda env for weathertag
+name: weathertag_env
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - streamlit
+      - requests
+      - bs4
+      - black
+      - pylint
+      - pycountry
+      - scikit-learn
+      - sentence-transformers
+      - transformers
+      - einops
+      - langchain
+      - langchain_openai
+      - langchain_core
+      - python_dotenv
+      - watchdog

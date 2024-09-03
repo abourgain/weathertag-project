@@ -1,0 +1,3 @@
+[tool.black]
+line-length = 200
+skip-string-normalization = true  # This will prevent black from changing single quotes to double quotes

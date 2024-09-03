@@ -1,0 +1,10 @@
+# Byte-compiled / optimized / DLL files
+*.pyc
+
+# __pycache__ is the directory that stores the compiled bytecode of the python files
+__pycache__/
+
+.env
+dev/
+.DS_Store
+

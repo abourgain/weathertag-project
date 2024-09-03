@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from dotenv import load_dotenv
 
+from components.weather import load_weather_data
+
 
 load_dotenv()
 
@@ -40,14 +42,22 @@ class Locations(BaseModel):
 
 
 class Title(BaseModel):
+    """Title model to represent a news headline."""
+
     title: str = Field(description="the extracted news headline")
 
 
 class LocationExtractionManager:
     """Class to manage location extraction, validation, and finding closest cities."""
 
-    def __init__(self, locations_data_cache: dict = None, coord_data_cache: dict = None):
+    def __init__(
+        self,
+        locations_data_cache: dict = None,
+        coord_data_cache: dict = None,
+        save_local: bool = False,
+    ):
         """Initialize the LocationExtractionManager with required components."""
+        self.save_local = save_local
         self.llm = ChatOpenAI(model='gpt-4o-mini', temperature=0.0)
         self.parser = self._setup_parser()
         self.chain = self._setup_chain()
@@ -55,30 +65,30 @@ class LocationExtractionManager:
         self.locations_data = self._load_locations_data() if not locations_data_cache else locations_data_cache
         self.coord_data_cache = self._load_coords_data() if not coord_data_cache else coord_data_cache
 
-    def _load_locations_data(self):
+    def _load_locations_data(self, locations_file: str = "./data/locations.json"):
         """Load location data from a JSON file."""
-        locations_file = "./data/locations.json"
 
-        if os.path.exists(locations_file):
+        if self.save_local and os.path.exists(locations_file):
             with open(locations_file, "r", encoding="utf-8") as f:
                 locations_data = json.load(f)
-
             return locations_data
-        raise FileNotFoundError("Locations data file not found!")
+
+        _, locations_data, _ = load_weather_data(save_local=self.save_local)
+        return locations_data
 
     def _load_coords_data(self):
         """Load coordinates data from a JSON file."""
         coords_file = "./data/coords.json"
 
-        if os.path.exists(coords_file):
+        if self.save_local and os.path.exists(coords_file):
             with open(coords_file, "r", encoding="utf-8") as f:
                 coord_data_cache_str_keys = json.load(f)
-
             # Convert the keys from strings to tuples
             coord_data_cache = {tuple(map(float, key.strip("()").split(", "))): value for key, value in coord_data_cache_str_keys.items()}
-
             return coord_data_cache
-        raise FileNotFoundError("Coordinates data file not found!")
+
+        _, _, coord_data_cache = load_weather_data(save_local=self.save_local)
+        return coord_data_cache
 
     def _setup_parser(self):
         """Set up the Pydantic output parser."""

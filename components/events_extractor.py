@@ -39,13 +39,6 @@ def computer_event_duplication_rate(n_old, n_current):
     return (n_old - n_current) / n_current
 
 
-# XXX If you look carefully, the code above may drop/miss/duplicate some events, e.g., misrecognizing some details as another event.
-# TODO How would you evaluate/quantify it's quality performance?  What metrics/stats would be helpful to calculate here?
-# TODO How would you improve its quality?  When can we stop?
-# TODO Find some examples of errors in the output.  Change the date and look at the results for other pages as well.
-# TODO Fix/improve the code to eliminate or reduce such errors/noise.
-
-
 def extract_event_details(
     date,
     category,

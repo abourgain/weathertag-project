@@ -16,3 +16,6 @@ format:
 
 run:
 	python3 -m streamlit run main.py
+
+run-dev:
+	python3 -m streamlit run main.py -- --dev # if you have your OpenAI API key in the .env file

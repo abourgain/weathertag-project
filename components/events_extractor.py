@@ -99,7 +99,7 @@ def extract_event_details(
 
     # Find the closest locations to the event
     if isinstance(location_manager, LocationEmbeddingManager):
-        locations = location_manager.find_closest_locations(content, top_k=3)
+        locations = location_manager.find_closest_locations(content, top_k=5)
         event_details['locations'] = locations
     elif isinstance(location_manager, LocationExtractionManager):
         locations = location_manager.get_locations_from_event(content)

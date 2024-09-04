@@ -191,14 +191,23 @@ def show_current_events_tagged_with_weather(**kwargs):
     with st.spinner("Extracting events details and weather info..."):
         events = list(extract_current_events(**kwargs))
 
+    cols = st.columns(2)
+    with cols[0]:
+        st.write("Events")
+    with cols[1]:
+        sub_cols = st.columns(2)
+        with sub_cols[0]:
+            number_locations = st.slider("Number of weather locations", min_value=1, max_value=5, value=1)
+
     for event in events:
         cols = st.columns(2)
         with cols[0]:
             st.write(event)
         with cols[1]:
+
             weathers = []
             if "locations" in event:
-                for location in event["locations"]:
+                for location in event["locations"][:number_locations]:
                     weather = lookup_weather(
                         kwargs["dt"],
                         kwargs["weather_data_cache"],

@@ -8,26 +8,23 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import torch
 from sentence_transformers import SentenceTransformer
-import streamlit as st
 
 from components.llm import Location
 from components.weather import get_country_name, load_weather_data
 
 
-@st.cache_resource
 def load_model(model_name):
     """Load and cache the SentenceTransformer model."""
     return SentenceTransformer(model_name, trust_remote_code=True)
 
 
-@st.cache_data
-def load_locations(file_path: str = "./data/locations.json", save_local: bool = False):
+def load_locations(file_path: str = "./data/locations.json"):
     """Load the locations from a json file and return them as a list."""
-    if save_local and Path(file_path).exists():
+    if Path(file_path).exists():
         with open(file_path, "r", encoding="utf-8") as f:
             locations = json.load(f)
     else:
-        _, locations, _ = load_weather_data(save_local=save_local)
+        _, locations, _ = load_weather_data()
 
     location_country_codes = [f"{city}, {country_code}" for country_code, cities in locations.items() for city in cities]
     location_country_names = [f"{city}, {get_country_name(country_code)}" for country_code, cities in locations.items() for city in cities]
@@ -35,7 +32,6 @@ def load_locations(file_path: str = "./data/locations.json", save_local: bool = 
     return location_country_codes, location_country_names
 
 
-@st.cache_data
 def compute_location_embeddings(location_names, model_name):
     """Compute embeddings for locations and return them."""
     model = load_model(model_name)
@@ -52,25 +48,22 @@ class LocationEmbeddingManager:
         model_path="./models/nomic-embed-text-v1.5",
         location_embeddings_path: str = "./data/location_embeddings.npy",
         location_names_path: str = "./data/locations.json",
-        save_local: bool = False,
     ):
         """Initialize the LocationEmbeddingManager with the specified model."""
-        self.save_local = save_local
         self.model_path = Path(model_path)
         self.model_name = model_name
 
         self.model = load_model(self.model_name)
-        self.location_country_codes, self.location_country_names = load_locations(file_path=location_names_path, save_local=self.save_local)
+        self.location_country_codes, self.location_country_names = load_locations(file_path=location_names_path)
         self.location_embeddings = self.load_location_embeddings(file_path=location_embeddings_path)
 
     def load_location_embeddings(self, file_path: str = "./data/location_embeddings.npy"):
         """Load embeddings for locations from a .npy file or compute them if necessary."""
-        if self.save_local and Path(file_path).exists():
+        if Path(file_path).exists():
             location_embeddings = np.load(file_path)
         else:
             location_embeddings = compute_location_embeddings(self.location_country_names, self.model_name)
-            if self.save_local:
-                np.save(file_path, location_embeddings)  # Save as a .npy file
+            np.save(file_path, location_embeddings)  # Save as a .npy file
 
         return location_embeddings
 

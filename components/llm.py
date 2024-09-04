@@ -54,10 +54,8 @@ class LocationExtractionManager:
         self,
         locations_data_cache: dict = None,
         coord_data_cache: dict = None,
-        save_local: bool = False,
     ):
         """Initialize the LocationExtractionManager with required components."""
-        self.save_local = save_local
         self.llm = ChatOpenAI(model='gpt-4o-mini', temperature=0.0)
         self.parser = self._setup_parser()
         self.chain = self._setup_chain()
@@ -68,26 +66,26 @@ class LocationExtractionManager:
     def _load_locations_data(self, locations_file: str = "./data/locations.json"):
         """Load location data from a JSON file."""
 
-        if self.save_local and os.path.exists(locations_file):
+        if os.path.exists(locations_file):
             with open(locations_file, "r", encoding="utf-8") as f:
                 locations_data = json.load(f)
             return locations_data
 
-        _, locations_data, _ = load_weather_data(save_local=self.save_local)
+        _, locations_data, _ = load_weather_data()
         return locations_data
 
     def _load_coords_data(self):
         """Load coordinates data from a JSON file."""
         coords_file = "./data/coords.json"
 
-        if self.save_local and os.path.exists(coords_file):
+        if os.path.exists(coords_file):
             with open(coords_file, "r", encoding="utf-8") as f:
                 coord_data_cache_str_keys = json.load(f)
             # Convert the keys from strings to tuples
             coord_data_cache = {tuple(map(float, key.strip("()").split(", "))): value for key, value in coord_data_cache_str_keys.items()}
             return coord_data_cache
 
-        _, _, coord_data_cache = load_weather_data(save_local=self.save_local)
+        _, _, coord_data_cache = load_weather_data()
         return coord_data_cache
 
     def _setup_parser(self):
